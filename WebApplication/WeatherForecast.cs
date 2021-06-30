@@ -1,15 +1,27 @@
 using System;
+using System.Linq;
+using RabbitMQ.Client;
+using System.Text;
 
-namespace WebApplication
+class EmitLogTopic
 {
-    public class WeatherForecast
+    public static string Send()
     {
-        public DateTime Date { get; set; }
+        var factory = new ConnectionFactory() { HostName = "localhost" };
+        using (var connection = factory.CreateConnection())
+        using (var channel = connection.CreateModel())
+        {
+            channel.ExchangeDeclare(exchange: "topic_logs",
+                                    type: "topic");
 
-        public int TemperatureC { get; set; }
-
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-
-        public string Summary { get; set; }
+            var routingKey = "anonymous.info";
+            var message = "Hello World!";
+            var body = Encoding.UTF8.GetBytes(message);
+            channel.BasicPublish(exchange: "topic_logs",
+                                 routingKey: routingKey,
+                                 basicProperties: null,
+                                 body: body);
+            return " [x] Sent " + routingKey + ":" + message;
+        }
     }
 }
