@@ -15,10 +15,14 @@ namespace WebApplication.Controllers
     public class MessageBrokerController : ControllerBase
     {
         private readonly Serilog.ILogger _logger;
+        private readonly IMessageBroker _messageBroker;
+        private readonly IDelayProvider _delayProvider;
 
-        public MessageBrokerController(Serilog.ILogger logger)
+        public MessageBrokerController(Serilog.ILogger logger, IMessageBroker messageBroker, IDelayProvider delayProvider)
         {
             _logger = logger;
+            _messageBroker = messageBroker;
+            _delayProvider = delayProvider;
         }
 
         public string SendLog(string key, string message)
@@ -27,8 +31,7 @@ namespace WebApplication.Controllers
         }
         private string SendMessage(string exchangeName, string key, string message)
         {
-            var exchange = new TopicExchange();
-            exchange.Send(exchangeName, key, Encoding.UTF8.GetBytes(message));
+            _messageBroker.Send(exchangeName, key, Encoding.UTF8.GetBytes(message));
             return exchangeName + " " + key + " " + message;
         }
         public string RecieveLog(string key, int timeOutSeconds)
@@ -48,8 +51,7 @@ namespace WebApplication.Controllers
                                   exchange: exchangeName,
                                   routingKey: key);
 
-                var exchange = new TopicExchange();
-                IList<Message> messages = exchange.ReceiveNoWait(queueName, timeOutSeconds);
+                IList<Message> messages = _messageBroker.ReceiveNoWait(queueName, timeOutSeconds, _delayProvider);
                 string recieved = "";
                 foreach (Message message in messages)
                     recieved += message.routingKey + " " + Encoding.UTF8.GetString(message.messageBody) + "\n";

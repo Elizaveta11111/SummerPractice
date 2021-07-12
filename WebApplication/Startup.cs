@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,16 @@ namespace WebApplication
         {
             services.AddControllers();
             services.AddSingleton(Log.Logger);
+            services.AddSingleton<IMessageBroker, MessageBrokerGeneric<IModel>>();
+            services.AddSingleton<IMessageBrokerConnectionGeneric<IModel>>(x =>
+            {
+                var factory = new ConnectionFactory() { HostName = "localhost" };
+                var connection = factory.CreateConnection();
+
+                return new RabbitMqMessageBrokerConnectionGeneric(connection);
+            });
+            services.AddSingleton<IMessageBrokerChannel, RabbitMQMessageBrokerChannel>();
+            services.AddSingleton<IDelayProvider, ThreadDelayProvider>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
